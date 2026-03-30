@@ -1,16 +1,54 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { DataProvider } from "@/context/DataContext";
+import Landing from "@/components/Landing";
+import Sidebar, { Section } from "@/components/Sidebar";
+import DashboardView from "@/components/DashboardView";
+import DataUpload from "@/components/DataUpload";
+import AlertsPanel from "@/components/AlertsPanel";
+import AboutSection from "@/components/AboutSection";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+export default function Index() {
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [activeSection, setActiveSection] = useState<Section>("dashboard");
+
+  if (!showDashboard) {
+    return <Landing onEnter={() => setShowDashboard(true)} />;
+  }
+
+  const renderSection = () => {
+    switch (activeSection) {
+      case "dashboard": return <DashboardView />;
+      case "upload": return <DataUpload />;
+      case "alerts": return <AlertsPanel />;
+      case "about": return <AboutSection />;
+    }
+  };
+
+  const sectionTitles: Record<Section, string> = {
+    dashboard: "Dashboard",
+    upload: "Data Upload",
+    alerts: "Alerts",
+    about: "About",
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <DataProvider>
+      <div className="min-h-screen">
+        <Sidebar
+          active={activeSection}
+          onNavigate={setActiveSection}
+          onExit={() => setShowDashboard(false)}
+        />
+        <main className="ml-64 max-md:ml-16 p-6">
+          <div className="mb-6">
+            <h1 className="font-display text-2xl font-bold text-foreground tracking-wider neon-text">
+              {sectionTitles[activeSection]}
+            </h1>
+            <div className="h-0.5 w-20 gradient-primary mt-2 rounded-full" />
+          </div>
+          {renderSection()}
+        </main>
+      </div>
+    </DataProvider>
   );
-};
-
-const Index = PlaceholderIndex;
-
-export default Index;
+}
