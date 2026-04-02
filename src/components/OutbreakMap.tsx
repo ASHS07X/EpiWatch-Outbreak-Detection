@@ -46,12 +46,27 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
 
     mapInstanceRef.current = map;
 
-    // Add circle markers for regions
-    const regionData = aggregateByRegion(data);
-    const maxCases = Math.max(...regionData.map((r) => r.cases), 1);
+    // Group by location — use latest record per location for accurate counts
+    const latestByLocation = new Map<string, { cases: number; deaths: number; recovered: number }>();
+    data.forEach((d) => {
+      const existing = latestByLocation.get(d.location);
+      if (!existing || d.date > (existing as any)._date) {
+        latestByLocation.set(d.location, { cases: d.cases, deaths: d.deaths, recovered: d.recovered, _date: d.date } as any);
+      }
+    });
 
-    regionData.forEach((region) => {
+    const regions = Array.from(latestByLocation.entries()).map(([location, vals]) => ({
+      location,
+      cases: vals.cases,
+      deaths: vals.deaths,
+      recovered: vals.recovered,
+    }));
+
+    const maxCases = Math.max(...regions.map((r) => r.cases), 1);
+
+    regions.forEach((region) => {
       const coords = getLocationCoords(region.location);
+      if (!coords) return;
 
       const intensity = region.cases / maxCases;
       const color =
