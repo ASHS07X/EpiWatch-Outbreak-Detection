@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { motion } from "framer-motion";
 import { getLocationCoords, OutbreakRecord } from "@/lib/csv-parser";
 import { useData } from "@/context/DataContext";
+import { Maximize2, Minimize2 } from "lucide-react";
 
 interface OutbreakMapProps {
   data: OutbreakRecord[];
@@ -27,15 +28,40 @@ function getLatestRegionData(data: OutbreakRecord[]): LatestRegionRecord[] {
     }
   });
 
-  return Array.from(latestByLocation.values()).filter((record) => getLocationCoords(record.location));
+  return Array.from(latestByLocation.values()).filter(
+    (record) => getLocationCoords(record.location) !== null
+  );
 }
 
 export default function OutbreakMap({ data }: OutbreakMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const { selectedRegion } = useData();
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const regions = useMemo(() => getLatestRegionData(data), [data]);
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen((prev) => !prev);
+  }, []);
+
+  // Invalidate map size after fullscreen transition
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      mapInstanceRef.current?.invalidateSize();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [isFullscreen]);
+
+  // Close fullscreen on Escape key
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isFullscreen]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -68,7 +94,9 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
 
     mapInstanceRef.current = map;
 
-    const maxCases = Math.max(...regions.map((region) => region.cases), 1);
+    if (regions.length === 0) return;
+
+    const maxCases = Math.max(...regions.map((r) => r.cases), 1);
 
     regions.forEach((region) => {
       const coords = getLocationCoords(region.location);
@@ -116,12 +144,36 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-card neon-border p-5"
+      className={`glass-card neon-border p-5 transition-all duration-300 ${
+        isFullscreen
+          ? "fixed inset-0 z-50 rounded-none flex flex-col bg-background"
+          : "relative"
+      }`}
     >
-      <h3 className="font-display text-sm font-semibold text-foreground mb-4 tracking-wider">
-        Outbreak Heatmap
-      </h3>
-      <div ref={mapRef} className="h-80 rounded-lg overflow-hidden" />
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-display text-sm font-semibold text-foreground tracking-wider">
+          Outbreak Heatmap
+        </h3>
+        <button
+          onClick={toggleFullscreen}
+          className="p-2 rounded-lg bg-secondary/50 border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+          title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+        >
+          {isFullscreen ? (
+            <Minimize2 className="w-4 h-4" />
+          ) : (
+            <Maximize2 className="w-4 h-4" />
+          )}
+        </button>
+      </div>
+
+      <div
+        ref={mapRef}
+        className={`rounded-lg overflow-hidden transition-all duration-300 ${
+          isFullscreen ? "flex-1" : "h-80"
+        }`}
+      />
+
       <div className="flex items-center gap-4 mt-3 text-xs font-mono text-muted-foreground">
         <span className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-full bg-neon-green inline-block" /> Low
@@ -136,4 +188,3 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
     </motion.div>
   );
 }
-
