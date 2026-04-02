@@ -3,6 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { motion } from "framer-motion";
 import { aggregateByRegion, getLocationCoords, OutbreakRecord } from "@/lib/csv-parser";
+import { useData } from "@/context/DataContext";
 
 interface OutbreakMapProps {
   data: OutbreakRecord[];
@@ -11,6 +12,7 @@ interface OutbreakMapProps {
 export default function OutbreakMap({ data }: OutbreakMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const { selectedRegion } = useData();
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -19,9 +21,21 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
       mapInstanceRef.current.remove();
     }
 
+    // Determine center based on selected region
+    let center: [number, number] = [20, 0];
+    let zoom = 2;
+
+    if (selectedRegion && selectedRegion !== "all") {
+      const coords = getLocationCoords(selectedRegion);
+      if (coords) {
+        center = coords;
+        zoom = 5;
+      }
+    }
+
     const map = L.map(mapRef.current, {
-      center: [20, 0],
-      zoom: 2,
+      center,
+      zoom,
       zoomControl: true,
       attributionControl: false,
     });
@@ -75,7 +89,7 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
         mapInstanceRef.current = null;
       }
     };
-  }, [data]);
+  }, [data, selectedRegion]);
 
   return (
     <motion.div
