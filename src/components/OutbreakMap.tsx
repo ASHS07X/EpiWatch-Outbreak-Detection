@@ -1,18 +1,41 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { motion } from "framer-motion";
-import { aggregateByRegion, getLocationCoords, OutbreakRecord } from "@/lib/csv-parser";
+import { getLocationCoords, OutbreakRecord } from "@/lib/csv-parser";
 import { useData } from "@/context/DataContext";
 
 interface OutbreakMapProps {
   data: OutbreakRecord[];
 }
 
+interface LatestRegionRecord {
+  location: string;
+  date: string;
+  cases: number;
+  deaths: number;
+  recovered: number;
+}
+
+function getLatestRegionData(data: OutbreakRecord[]): LatestRegionRecord[] {
+  const latestByLocation = new Map<string, LatestRegionRecord>();
+
+  data.forEach((record) => {
+    const existing = latestByLocation.get(record.location);
+    if (!existing || record.date > existing.date) {
+      latestByLocation.set(record.location, record);
+    }
+  });
+
+  return Array.from(latestByLocation.values()).filter((record) => getLocationCoords(record.location));
+}
+
 export default function OutbreakMap({ data }: OutbreakMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const { selectedRegion } = useData();
+
+  const regions = useMemo(() => getLatestRegionData(data), [data]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -21,7 +44,6 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
       mapInstanceRef.current.remove();
     }
 
-    // Determine center based on selected region
     let center: [number, number] = [20, 0];
     let zoom = 2;
 
@@ -46,23 +68,7 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
 
     mapInstanceRef.current = map;
 
-    // Group by location — use latest record per location for accurate counts
-    const latestByLocation = new Map<string, { cases: number; deaths: number; recovered: number }>();
-    data.forEach((d) => {
-      const existing = latestByLocation.get(d.location);
-      if (!existing || d.date > (existing as any)._date) {
-        latestByLocation.set(d.location, { cases: d.cases, deaths: d.deaths, recovered: d.recovered, _date: d.date } as any);
-      }
-    });
-
-    const regions = Array.from(latestByLocation.entries()).map(([location, vals]) => ({
-      location,
-      cases: vals.cases,
-      deaths: vals.deaths,
-      recovered: vals.recovered,
-    }));
-
-    const maxCases = Math.max(...regions.map((r) => r.cases), 1);
+    const maxCases = Math.max(...regions.map((region) => region.cases), 1);
 
     regions.forEach((region) => {
       const coords = getLocationCoords(region.location);
@@ -73,15 +79,15 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
         intensity > 0.7
           ? "hsl(0, 100%, 60%)"
           : intensity > 0.4
-          ? "hsl(45, 100%, 55%)"
-          : "hsl(150, 100%, 50%)";
+            ? "hsl(45, 100%, 55%)"
+            : "hsl(150, 100%, 50%)";
 
-      const radius = Math.max(8, Math.min(40, (region.cases / maxCases) * 40));
+      const radius = Math.max(8, Math.min(40, intensity * 40));
 
       L.circleMarker(coords, {
         radius,
         fillColor: color,
-        color: color,
+        color,
         weight: 1,
         opacity: 0.8,
         fillOpacity: 0.35,
@@ -89,6 +95,7 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
         .bindPopup(
           `<div style="font-family: Rajdhani, sans-serif; color: #1a1a2e;">
             <strong style="font-family: Orbitron, sans-serif; font-size: 14px;">${region.location}</strong><br/>
+            <span>Date: <b>${region.date}</b></span><br/>
             <span>Cases: <b>${region.cases.toLocaleString()}</b></span><br/>
             <span>Deaths: <b>${region.deaths.toLocaleString()}</b></span><br/>
             <span>Recovered: <b>${region.recovered.toLocaleString()}</b></span>
@@ -103,7 +110,7 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
         mapInstanceRef.current = null;
       }
     };
-  }, [data, selectedRegion]);
+  }, [regions, selectedRegion]);
 
   return (
     <motion.div
@@ -129,3 +136,4 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
     </motion.div>
   );
 }
+
