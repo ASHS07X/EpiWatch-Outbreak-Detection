@@ -8,20 +8,25 @@ export interface OutbreakRecord {
   recovered: number;
 }
 
+function normalizeRow(row: any): OutbreakRecord {
+  const location = String(row.location || row.country || "").trim();
+  const date = String(row.date || "").trim();
+  const cases = Number(row.cases ?? row.total_cases ?? row.new_cases ?? 0) || 0;
+  const deaths = Number(row.deaths ?? row.total_deaths ?? row.new_deaths ?? 0) || 0;
+  const recovered = Number(row.recovered ?? row.total_recovered ?? 0) || 0;
+  return { location, date, cases, deaths, recovered };
+}
+
 export function parseCSV(file: File): Promise<OutbreakRecord[]> {
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const data: OutbreakRecord[] = results.data.map((row: any) => ({
-          location: String(row.location || "").trim(),
-          date: String(row.date || "").trim(),
-          cases: parseInt(row.cases) || 0,
-          deaths: parseInt(row.deaths) || 0,
-          recovered: parseInt(row.recovered) || 0,
-        }));
-        resolve(data.filter((d) => d.location && d.date));
+        const data = results.data
+          .map((row: any) => normalizeRow(row))
+          .filter((d) => d.location && d.date);
+        resolve(data);
       },
       error: (err) => reject(err),
     });
