@@ -45,12 +45,16 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
     setIsFullscreen((prev) => !prev);
   }, []);
 
-  // Invalidate map size after fullscreen transition
+  // Invalidate map size after fullscreen transition with multiple attempts
   useEffect(() => {
-    const timer = setTimeout(() => {
-      mapInstanceRef.current?.invalidateSize();
-    }, 350);
-    return () => clearTimeout(timer);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const timers = [100, 300, 500].map((delay) =>
+      setTimeout(() => {
+        map.invalidateSize({ animate: false });
+      }, delay)
+    );
+    return () => timers.forEach(clearTimeout);
   }, [isFullscreen]);
 
   // Close fullscreen on Escape key
