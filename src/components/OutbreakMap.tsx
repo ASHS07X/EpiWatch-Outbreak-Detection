@@ -52,7 +52,6 @@ export default function OutbreakMap({ data }: OutbreakMapProps) {
 
     regionData.forEach((region) => {
       const coords = getLocationCoords(region.location);
-      if (!coords) return;
 
       const intensity = region.cases / maxCases;
       const color =
