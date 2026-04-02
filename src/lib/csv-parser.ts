@@ -230,24 +230,14 @@ const LOCATION_COORDS: Record<string, [number, number]> = {
   "Helsinki": [60.1699, 24.9384],
 };
 
-// Case-insensitive lookup with deterministic fallback for unknown locations
+// Case-insensitive lookup — only returns coords for known locations
 const coordsLookup = new Map<string, [number, number]>();
 Object.entries(LOCATION_COORDS).forEach(([key, val]) => {
   coordsLookup.set(key.toLowerCase(), val);
 });
 
-function hashStringToCoord(str: string): [number, number] {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = (h * 31 + str.charCodeAt(i)) & 0x7fffffff;
-  }
-  const lat = ((h % 1600) / 10) - 80; // -80 to 80
-  const lng = (((h >> 8) % 3600) / 10) - 180; // -180 to 180
-  return [lat, lng];
-}
-
-export function getLocationCoords(location: string): [number, number] {
-  return coordsLookup.get(location.toLowerCase()) || hashStringToCoord(location);
+export function getLocationCoords(location: string): [number, number] | null {
+  return coordsLookup.get(location.toLowerCase()) || null;
 }
 
 export function getAlerts(data: OutbreakRecord[]) {
