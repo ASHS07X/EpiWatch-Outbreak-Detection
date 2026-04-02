@@ -45,16 +45,28 @@ export function getDateRange(data: OutbreakRecord[]): { min: string; max: string
   return { min: dates[0] || "", max: dates[dates.length - 1] || "" };
 }
 
+function normalizeDate(dateStr: string): string {
+  if (!dateStr) return "";
+  // If dd-mm-yyyy or dd/mm/yyyy, convert to yyyy-mm-dd
+  const ddmmyyyy = dateStr.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+  if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`;
+  return dateStr; // already yyyy-mm-dd or native date input
+}
+
 export function filterData(
   data: OutbreakRecord[],
   region?: string,
   startDate?: string,
   endDate?: string
 ): OutbreakRecord[] {
+  const normStart = normalizeDate(startDate || "");
+  const normEnd = normalizeDate(endDate || "");
+
   return data.filter((d) => {
-    if (region && region !== "all" && d.location !== region) return false;
-    if (startDate && d.date < startDate) return false;
-    if (endDate && d.date > endDate) return false;
+    if (region && region !== "all" && d.location.toLowerCase() !== region.toLowerCase()) return false;
+    const normDate = normalizeDate(d.date);
+    if (normStart && normDate < normStart) return false;
+    if (normEnd && normDate > normEnd) return false;
     return true;
   });
 }
