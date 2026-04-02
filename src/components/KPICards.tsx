@@ -27,7 +27,7 @@ function AnimatedCounter({ target, duration = 1.5 }: { target: number; duration?
     return () => clearInterval(timer);
   }, [target, duration]);
 
-  return <span>{count.toLocaleString()}</span>;
+  return <span className="truncate">{count.toLocaleString()}</span>;
 }
 
 const cards = [
@@ -63,7 +63,7 @@ export default function KPICards({ totalCases, totalDeaths, totalRecoveries }: K
               <card.icon className={`w-4 h-4 ${card.colorClass}`} />
             </div>
           </div>
-          <p className={`text-3xl font-display font-bold ${card.colorClass}`}>
+          <p className={`text-2xl xl:text-3xl font-display font-bold ${card.colorClass} truncate`}>
             {card.key === "rate" ? (
               <>{recoveryRate.toFixed(1)}%</>
             ) : (
