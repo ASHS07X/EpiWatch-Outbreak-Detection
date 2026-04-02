@@ -11,9 +11,12 @@ export interface OutbreakRecord {
 function normalizeRow(row: any): OutbreakRecord {
   const location = String(row.location || row.country || "").trim();
   const date = String(row.date || "").trim();
-  const cases = Number(row.cases ?? row.total_cases ?? row.new_cases ?? 0) || 0;
-  const deaths = Number(row.deaths ?? row.total_deaths ?? row.new_deaths ?? 0) || 0;
-  const recovered = Number(row.recovered ?? row.total_recovered ?? 0) || 0;
+  const cases = Number(row.total_cases ?? row.cases ?? row.new_cases ?? 0) || 0;
+  const deaths = Number(row.total_deaths ?? row.deaths ?? row.new_deaths ?? 0) || 0;
+  const rawRecovered = row.recovered ?? row.total_recovered;
+  const recovered = rawRecovered != null && rawRecovered !== ""
+    ? Number(rawRecovered) || 0
+    : Math.max(cases - deaths, 0);
   return { location, date, cases, deaths, recovered };
 }
 

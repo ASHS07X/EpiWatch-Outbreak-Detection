@@ -28,6 +28,7 @@ export default function DashboardView() {
   const totalCases = filtered.reduce((s, d) => s + d.cases, 0);
   const totalDeaths = filtered.reduce((s, d) => s + d.deaths, 0);
   const totalRecoveries = filtered.reduce((s, d) => s + d.recovered, 0);
+  const recoveryRate = totalCases > 0 ? (totalRecoveries / totalCases) * 100 : 0;
 
   return (
     <div className="space-y-4">
