@@ -27,7 +27,10 @@ function AnimatedCounter({ target, duration = 1.5 }: { target: number; duration?
     return () => clearInterval(timer);
   }, [target, duration]);
 
-  return <span className="truncate">{count.toLocaleString()}</span>;
+  const formatted = count >= 1_000_000
+    ? new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(count)
+    : count.toLocaleString();
+  return <span className="truncate">{formatted}</span>;
 }
 
 const cards = [
